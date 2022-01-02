@@ -1,0 +1,22 @@
+version: "3"
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+      dockerfile: Dockerfile.dev-server
+    ports:
+      - "3000:3000"
+    working_dir: /go/src/github.com/kabaliserv/filex
+    volumes:
+      - ..:/go/src/github.com/kabaliserv/filex
+  web:
+    container_name: web
+    build:
+      context: .
+      dockerfile: Dockerfile.dev-web
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../web:/usr/src/filex-web
+    command: "./start-dev.sh"
