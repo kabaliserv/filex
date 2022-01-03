@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   bin = "./tmp/kbs-filex"
-  cmd = "go build -o ./tmp/kbs-filex ./cmd/kbs-filex/main.go"
+  cmd = "go build -ldflags='-X github.com/kabaliserv/filex/web.Mode=dev' -o ./tmp/kbs-filex ./cmd/kbs-filex"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "web/node_modules"]
   exclude_file = []
