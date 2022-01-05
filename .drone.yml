@@ -12,6 +12,7 @@ steps:
     image: golang:1.17
     commands:
       - mkdir web/dist
+      - echo 0 > web/dist/test.txt
       - go test ./...
       - go build -o /dev/null github.com/kabaliserv/filex/cmd/kbs-filex
 
