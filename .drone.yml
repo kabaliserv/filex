@@ -30,7 +30,7 @@ steps:
       GOOS: linux
 
   - name: publish
-    image: plugins/docker:18
+    image: plugins/docker:20.10
     settings:
       auto_tag: true
       auto_tag_suffix: linux-amd64
