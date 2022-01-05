@@ -29,11 +29,16 @@ steps:
       GOARCH: amd64
       GOOS: linux
 
+  - name: "set version"
+    image: bitnami/git
+    commands:
+      - export GIT_COMMIT_ID=$(git log --format="%H" -n 1 | egrep -o '[[:digit:]]{7}' | head -n1)
+      - export GIT_TAG=$(git tag | sort -V | tail -1)
+      - if [ -z "$GIT_TAG" ]; then echo "$GIT_COMMIT_ID"; else echo "$GIT_TAG-$GIT_COMMIT_ID"; fi > .tags
+
   - name: publish
     image: plugins/docker:20.10
     settings:
-      auto_tag: true
-      auto_tag_suffix: linux-amd64
       dockerfile: docker/Dockerfile
       repo: wilsonkbs/filex
       username:
