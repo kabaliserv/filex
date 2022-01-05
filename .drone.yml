@@ -11,6 +11,7 @@ steps:
   - name: test
     image: golang:1.17
     commands:
+      - mkdir web/dist
       - go test ./...
       - go build -o /dev/null github.com/kabaliserv/filex/cmd/kbs-filex
 
@@ -33,7 +34,7 @@ steps:
       auto_tag: true
       auto_tag_suffix: linux-amd64
       dockerfile: docker/Dockerfile
-      repo: kabaliserv/filex
+      repo: wilson-kbs/filex
       username:
         from_secret: docker_username
       password:
