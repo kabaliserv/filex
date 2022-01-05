@@ -34,7 +34,7 @@ steps:
     commands:
       - export GIT_COMMIT_ID=$(git log --format="%H" -n 1 | egrep -o '[[:digit:]]{7}' | head -n1)
       - export GIT_TAG=$(git tag | sort -V | tail -1)
-      - if [ -z "$GIT_TAG" ]; then echo "$GIT_COMMIT_ID"; else echo "$GIT_TAG-$GIT_COMMIT_ID"; fi > .tags
+      - if [ -z "$GIT_TAG" ]; then echo -n "$GIT_COMMIT_ID"; else echo -n "$GIT_TAG-$GIT_COMMIT_ID"; fi > .tags
 
   - name: publish
     image: plugins/docker:20.10
