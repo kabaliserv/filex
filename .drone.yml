@@ -35,7 +35,7 @@ steps:
       auto_tag: true
       auto_tag_suffix: linux-amd64
       dockerfile: docker/Dockerfile
-      repo: wilson-kbs/filex
+      repo: wilsonkbs/filex
       username:
         from_secret: docker_username
       password:
