@@ -34,7 +34,7 @@ func TestNewUserAccess(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(`Error: %v, want "", error`, err)
+		t.Errorf(`Error: %v, want "", error`, err)
 	}
 
 }
