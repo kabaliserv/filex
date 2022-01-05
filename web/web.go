@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"log"
@@ -21,6 +22,15 @@ var (
 	indexFile *bytes.Buffer
 )
 
+type manifestJSON struct {
+	Source sources `json:"main.ts"`
+}
+
+type sources struct {
+	indexJS  string   `json:"file"`
+	indexCSS []string `json:"css"`
+}
+
 func init() {
 	check := func(err error) {
 		if err != nil {
@@ -33,11 +43,33 @@ func init() {
 	dist, err = fs.Sub(embedWEB, "dist")
 	check(err)
 
+	var indexJS string
+	var indexCSS string
+
+	if Mode == "prod" {
+		var manifest manifestJSON
+
+		src, err := dist.Open("mi")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer src.Close()
+		if err := json.NewDecoder(src).Decode(&manifest); err != nil {
+			log.Fatal(err)
+		}
+		indexJS = manifest.Source.indexJS
+		indexCSS = manifest.Source.indexCSS[0]
+	}
+
 	// Parse Index File
 	data := struct {
-		DevMode bool
+		DevMode  bool
+		IndexJS  string
+		IndexCSS string
 	}{
-		DevMode: Mode != "prod",
+		DevMode:  Mode != "prod",
+		IndexJS:  indexJS,
+		IndexCSS: indexCSS,
 	}
 
 	tmpl, err := template.New("app").Parse(string(ReadFile("/index.tmpl")))

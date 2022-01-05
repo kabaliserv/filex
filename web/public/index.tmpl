@@ -11,6 +11,9 @@
     {{if .DevMode }}
     <script type="module" src="http://localhost:3001/@vite/client"></script>
     <script type="module" src="http://localhost:3001/main.ts"></script>
+    {{else}}
+    <link rel="stylesheet" href="/assets/{{ .IndexCSS }}" />
+    <script type="module" src="/assets/{{ .IndexJS }}"></script>
     {{end}}
   </body>
 </html>

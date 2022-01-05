@@ -5,11 +5,12 @@ import * as path from 'path'
 
 // https://vitejs.dev/config/
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({mode, command}) => {
   const config: UserConfig = {
     root: "src",
     plugins: [vue()],
     build: {
+
       outDir: path.resolve(__dirname, 'dist'),
       emptyOutDir: true,
       // generate manifest.json in outDir
@@ -24,7 +25,7 @@ export default defineConfig(({mode}) => {
     }
   }
 
-  if (mode == "dev") {
+  if (command == "serve") {
     config.plugins.push(
         copy({
           targets: [
@@ -36,5 +37,6 @@ export default defineConfig(({mode}) => {
         })
     )
   }
+
   return config
 })
