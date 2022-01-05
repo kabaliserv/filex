@@ -17,7 +17,8 @@ import (
 
 func InitializeApplication(config2 config.Config) (application, error) {
 	storageStorage := storage.New(config2)
-	server := api.New(config2, storageStorage)
+	store := provideStore(config2)
+	server := api.New(config2, storageStorage, store)
 	webServer := web.New()
 	mux := provideRouter(server, webServer)
 	serverServer := provideServer(mux, config2)
