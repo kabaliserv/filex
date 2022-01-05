@@ -14,8 +14,9 @@ var storeSet = wire.NewSet(
 func provideStore(config config.Config) core.Store {
 	var store core.Store
 
-	if config.Database.Host == "" {
-		store = sql.New("sqlite", "./tmp/database.sqlite")
+	switch config.Database.Driver {
+	case "sqlite3", "mysql", "postgres":
+		store = sql.New(config.Database.Driver, config.Database.DataSource)
 	}
 
 	return store

@@ -4,7 +4,12 @@ RUN apt update && apt upgrade -y
 
 WORKDIR /app
 
+VOLUME /data
+
 RUN curl -fLo install.sh https://raw.githubusercontent.com/cosmtrek/air/master/install.sh \
     && chmod +x install.sh && sh install.sh && cp ./bin/air /bin/air
+
+ENV FILEX_DATABASE_DRIVER sqlite3
+ENV FILEX_DATABASE_DATASOURCE /data/database.sqlite
 
 CMD air

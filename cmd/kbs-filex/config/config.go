@@ -22,9 +22,8 @@ type (
 	}
 
 	Database struct {
-		Host  string `envconfig:"FILEX_SERVER_HOST" default:""`
-		Port  string `envconfig:"FILEX_SERVER_PORT" default:""`
-		Proto string `envconfig:"FILEX_SERVER_PROTO" default:""`
+		Driver     string `envconfig:"FILEX_DATABASE_DRIVER" default:"sqlite3"`
+		DataSource string `envconfig:"FILEX_DATABASE_DATASOURCE" default:""`
 	}
 )
 
