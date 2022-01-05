@@ -22,6 +22,7 @@ func main() {
 		panic(err)
 	}
 	app.server.ListenAndServe(context.Background())
+
 }
 
 type application struct {

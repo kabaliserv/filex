@@ -4,8 +4,9 @@ import "github.com/kelseyhightower/envconfig"
 
 type (
 	Config struct {
-		Storage Storage
-		Server  Server
+		Storage  Storage
+		Server   Server
+		Database Database
 	}
 
 	Storage struct {
@@ -18,6 +19,12 @@ type (
 		Host  string `envconfig:"FILEX_SERVER_HOST" default:"localhost:3000"`
 		Port  string `envconfig:"FILEX_SERVER_PORT" default:":3000"`
 		Proto string `envconfig:"FILEX_SERVER_PROTO" default:"http"`
+	}
+
+	Database struct {
+		Host  string `envconfig:"FILEX_SERVER_HOST" default:""`
+		Port  string `envconfig:"FILEX_SERVER_PORT" default:""`
+		Proto string `envconfig:"FILEX_SERVER_PROTO" default:""`
 	}
 )
 
