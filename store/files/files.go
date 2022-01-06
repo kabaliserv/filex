@@ -1,9 +1,9 @@
-package storage
+package files
 
 import (
-	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
-	"github.com/kabaliserv/filex/storage/local"
-	"github.com/kabaliserv/filex/storage/s3"
+	"github.com/kabaliserv/filex/core"
+	"github.com/kabaliserv/filex/store/files/local"
+	"github.com/kabaliserv/filex/store/files/s3"
 	tusd "github.com/tus/tusd/pkg/handler"
 	"log"
 	"os"
@@ -15,18 +15,18 @@ type (
 	}
 )
 
-func New(config config.Config) Storage {
+func New(option core.StoreOption) Storage {
 
 	var store Storage
 
-	if config.Storage.S3Bucket != "" {
+	if option.FileStoreS3Bucket != "" {
 
-		store = s3.New(config.Storage.S3Bucket, config.Storage.S3EndPoint)
+		store = s3.New(option.FileStoreS3Bucket, option.FileStoreS3Endpoint)
 
 	} else {
 
-		path := "/data/files"
-		
+		path := option.FileStoreLocalPath
+
 		f, err := os.Stat(path)
 
 		if err != nil {

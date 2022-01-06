@@ -8,7 +8,13 @@ import (
 )
 
 func TestNewUserAccess(t *testing.T) {
-	accessStore := New("sqlite", "/tmp/database_test.sqlite").AccessStore()
+	options := core.StoreOption{
+		FileStoreLocalPath: "/tmp/files",
+		DatabaseDriver:     "sqlite3",
+		DatabaseEndpoint:   "file::memory:?cache=shared",
+	}
+	db := New(options)
+	accessStore := db.AccessStore()
 	newUserAccess, err := accessStore.NewUserAccess()
 
 	if err == nil {
@@ -32,6 +38,13 @@ func TestNewUserAccess(t *testing.T) {
 
 		}
 	}
+
+	defer func(db core.Store) {
+		err := db.CloseConnection()
+		if err != nil {
+			t.Error(err)
+		}
+	}(db)
 
 	if err != nil {
 		t.Errorf(`Error: %v, want "", error`, err)

@@ -10,18 +10,18 @@ import (
 	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
 	"github.com/kabaliserv/filex/handler/api"
 	"github.com/kabaliserv/filex/handler/web"
-	"github.com/kabaliserv/filex/storage"
 )
 
 // Injectors from wire.go:
 
 func InitializeApplication(config2 config.Config) (application, error) {
-	storageStorage := storage.New(config2)
-	store := provideStore(config2)
-	server := api.New(config2, storageStorage, store)
-	webServer := web.New()
+	storeOption := provideStoreOption(config2)
+	store := provideStore(storeOption)
+	server := api.New(store)
+	options := provideServerOptions(config2)
+	webServer := web.New(options)
 	mux := provideRouter(server, webServer)
 	serverServer := provideServer(mux, config2)
-	mainApplication := newApplication(serverServer, storageStorage)
+	mainApplication := newApplication(serverServer)
 	return mainApplication, nil
 }

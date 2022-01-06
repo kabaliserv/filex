@@ -10,6 +10,10 @@ import (
 func getConnection(database, endpoint string) (*gorm.DB, error) {
 	var connector gorm.Dialector
 
+	//log.Printf("Database Source is: %v", endpoint)
+	//stat, err := os.Stat("./")
+	//log.Println(stat.Name(), err, os.Args)
+
 	switch database {
 	case "postgres":
 		connector = postgres.Open(endpoint)

@@ -2,32 +2,41 @@ package sql
 
 import (
 	"github.com/kabaliserv/filex/core"
-	"github.com/wader/gormstore/v2"
+	"github.com/kabaliserv/filex/store/files"
 	"gorm.io/gorm"
 	"log"
 )
 
 type Store struct {
-	db          *gorm.DB
-	userStore   core.UserStore
-	accessStore core.AccessStore
-	session     core.SessionStore
+	db           *gorm.DB
+	userStore    *UserDBStore
+	accessStore  *AccessDBStore
+	sessionStore *sessionStore
+	fileStore    *fileStore
 }
 
-func New(database, endpoint string) core.Store {
-	db, err := getConnection(database, endpoint)
+func New(option core.StoreOption) core.Store {
+	db, err := getConnection(option.DatabaseDriver, option.DatabaseEndpoint)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	return &Store{db: db}
+	datafileStore := files.New(option)
+
+	return &Store{
+		db:           db,
+		userStore:    newUserStore(db),
+		accessStore:  newAccessStore(db),
+		sessionStore: newSessionStore(db, option.SessionSecret),
+		fileStore:    newFileStore(db, datafileStore),
+	}
 }
 
 func (s *Store) GetDB() *gorm.DB {
 	return s.db
 }
 
-func (s *Store) Close() error {
+func (s *Store) CloseConnection() error {
 	db, err := s.db.DB()
 	if err != nil {
 		return err
@@ -36,27 +45,19 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) UserStore() core.UserStore {
-	if s.userStore == nil {
-		s.userStore = &UserDBStore{s.db.Model(&User{})}
-		migrateTable(s.db, &User{})
-	}
 	return s.userStore
 }
 
 func (s *Store) AccessStore() core.AccessStore {
-	if s.accessStore == nil {
-		s.accessStore = &AccessDBStore{s.db.Model(&Access{})}
-		migrateTable(s.db, &Access{})
-	}
 	return s.accessStore
 }
 
 func (s *Store) SessionStore() core.SessionStore {
-	if s.session == nil {
-		gstore := gormstore.New(s.GetDB(), []byte("azertFRDSFV563yuiopqsdfVD36514ghjklmwxRcvbnd6f8GRSGs13rg-51h-8hhFs"))
-		s.session = &SessionStore{gstore}
-	}
-	return s.session
+	return s.sessionStore
+}
+
+func (s *Store) FileStore() core.FileStore {
+	return s.fileStore
 }
 
 func migrateTable(db *gorm.DB, table interface{}) {

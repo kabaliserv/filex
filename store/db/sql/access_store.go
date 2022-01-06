@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kabaliserv/filex/core"
 	"gorm.io/gorm"
-	"reflect"
 	"time"
 )
 
@@ -35,6 +34,11 @@ type AccessDBStore struct {
 	*gorm.DB
 }
 
+func newAccessStore(db *gorm.DB) *AccessDBStore {
+	db.AutoMigrate(&Access{})
+	return &AccessDBStore{db.Model(&Access{})}
+}
+
 func (s *AccessDBStore) GetAccess(token string) (interface{}, error) {
 	access, err := s.getAccessByToken(token)
 	if err != nil {
@@ -52,7 +56,15 @@ func (s *AccessDBStore) GetUserAccess(token string) (*core.UserAccess, error) {
 
 	t := s.toUserAccess(userAccess)
 
-	t.Save = s.getSaveHandle(&t)
+	saveFunc := func(v map[string]interface{}) error {
+		return s.updateOne(userAccess.Token, v)
+	}
+
+	getValueFunc := func() map[string]interface{} {
+		return structs.Map(s.fromUserAccess(t))
+	}
+
+	t.Save = getSaveChangeFunc(saveFunc, getValueFunc)
 
 	return &t, nil
 }
@@ -102,16 +114,7 @@ func (s AccessDBStore) getSaveHandle(access interface{}) func() error {
 
 	ff := func() error {
 		newValue := f(access)
-
-		var updateValue = make(map[string]interface{})
-
-		for k, v := range newValue {
-			if !reflect.DeepEqual(oldValue[k], v) {
-				updateValue[k] = v
-			}
-		}
-
-		return s.updateOne(token, updateValue)
+		return s.updateOne(token, getChangedValue(oldValue, newValue))
 	}
 
 	return ff

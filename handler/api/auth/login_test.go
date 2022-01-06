@@ -11,7 +11,13 @@ import (
 )
 
 func TestLogin(t *testing.T) {
-	db := sql.New("sqlite", "file::memory:?cache=shared")
+	options := core.StoreOption{
+		FileStoreLocalPath: "/tmp/files",
+		DatabaseDriver:     "sqlite3",
+		DatabaseEndpoint:   "file::memory:?cache=shared",
+	}
+
+	db := sql.New(options)
 
 	userDB := db.UserStore()
 	sessionDB := db.SessionStore()
@@ -41,7 +47,7 @@ func TestLogin(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 	defer func(db core.Store) {
-		err := db.Close()
+		err := db.CloseConnection()
 		if err != nil {
 			t.Error(err)
 		}

@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type userSchema struct {
 	ID           string `gorm:"primaryKey;uniqueIndex"`
 	Username     string `gorm:"unique"`
 	PasswordHash string
@@ -18,9 +18,14 @@ type UserDBStore struct {
 	*gorm.DB
 }
 
+func newUserStore(db *gorm.DB) *UserDBStore {
+	db.AutoMigrate(&userSchema{})
+	return &UserDBStore{db.Model(&userSchema{})}
+}
+
 func (s UserDBStore) GetUserById(id string) (*core.User, error) {
 
-	user := User{ID: id}
+	user := userSchema{ID: id}
 
 	if err := s.get(&user); err != nil {
 		return nil, err
@@ -34,7 +39,7 @@ func (s UserDBStore) GetUserById(id string) (*core.User, error) {
 
 func (s UserDBStore) GetUserByName(name string) (*core.User, error) {
 
-	user := User{Username: name}
+	user := userSchema{Username: name}
 
 	if err := s.get(&user); err != nil {
 		return nil, err
@@ -48,7 +53,7 @@ func (s UserDBStore) GetUserByName(name string) (*core.User, error) {
 
 func (s UserDBStore) GetUserByEmail(email string) (*core.User, error) {
 
-	user := User{Email: email}
+	user := userSchema{Email: email}
 
 	if err := s.get(&user); err != nil {
 		return nil, err
@@ -89,19 +94,19 @@ func (s UserDBStore) Has(id string) bool {
 
 	var c int64
 
-	s.Where(&User{ID: id}).Count(&c)
+	s.Where(&userSchema{ID: id}).Count(&c)
 
 	return c > 0
 
 }
 
-func (s UserDBStore) create(v *User) error {
+func (s UserDBStore) create(v *userSchema) error {
 
 	return s.Create(v).Error
 
 }
 
-func (s UserDBStore) get(v *User) error {
+func (s UserDBStore) get(v *userSchema) error {
 
 	return s.Where(v).First(v).Error
 
@@ -109,13 +114,13 @@ func (s UserDBStore) get(v *User) error {
 
 func (s UserDBStore) save(id string, v map[string]interface{}) error {
 
-	return s.Where(&User{ID: id}).Updates(v).Error
+	return s.Where(&userSchema{ID: id}).Updates(v).Error
 
 }
 
-func (s UserDBStore) fromUserCore(u core.User) User {
+func (s UserDBStore) fromUserCore(u core.User) userSchema {
 
-	return User{
+	return userSchema{
 		ID:           u.ID,
 		Username:     u.Username,
 		PasswordHash: u.PasswordHash,
@@ -125,7 +130,7 @@ func (s UserDBStore) fromUserCore(u core.User) User {
 
 }
 
-func (s UserDBStore) toUserCore(u User) core.User {
+func (s UserDBStore) toUserCore(u userSchema) core.User {
 
 	return core.User{
 		ID:           u.ID,

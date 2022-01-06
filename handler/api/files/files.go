@@ -1,38 +1,23 @@
 package files
 
 import (
-	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/kabaliserv/filex/storage"
+	"github.com/kabaliserv/filex/core"
 	tusd "github.com/tus/tusd/pkg/handler"
-	"net/http"
+	"log"
 )
 
-func Handle(storage storage.Storage) http.Handler {
-	r := chi.NewRouter()
-
-	handler, err := tusd.NewUnroutedHandler(tusd.Config{
-		BasePath:      "/api/files",
-		StoreComposer: storage.GetStoreComposer(),
-		PreUploadCreateCallback: func(hook tusd.HookEvent) error {
-
-			return errors.New("totoot")
-		},
-	})
-
-	if err != nil {
-		panic(err)
+func PreUploadCreate(files core.FileStore) func(hook tusd.HookEvent) error {
+	return func(hook tusd.HookEvent) error {
+		//return files.AddInCache(hook.Upload.ID)
+		return nil
 	}
+}
 
-	r.Use(handler.Middleware)
-
-	r.Post("/", handler.PostFile)
-	r.Patch("/{id:[-+a-z0-9]+}", handler.PatchFile)
-
-	rr := r.With(acl)
-	rr.Head("/{id:[-+a-z0-9]+}", handler.HeadFile)
-	rr.Get("/{id:[-+a-z0-9]+}", handler.GetFile)
-	rr.Delete("/{id:[-+a-z0-9]+}", handler.DelFile)
-
-	return r
+func PreUploadFinish(files core.FileStore) func(hook tusd.HookEvent) error {
+	return func(hook tusd.HookEvent) error {
+		log.Printf("Upload Files: %v", hook.Upload.ID)
+		file, err := files.New(hook.Upload.ID)
+		log.Println(file)
+		return err
+	}
 }

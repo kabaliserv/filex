@@ -10,7 +10,8 @@ type (
 		UserStore() UserStore
 		AccessStore() AccessStore
 		SessionStore() SessionStore
-		Close() error
+		FileStore() FileStore
+		CloseConnection() error
 	}
 
 	UserStore interface {
