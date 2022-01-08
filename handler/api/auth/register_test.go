@@ -17,8 +17,10 @@ func TestGoodRequest(t *testing.T) {
 	}
 
 	db := sql.New(options)
+	userDB := db.UserStore()
+	storageDB := db.StorageStore()
 
-	f := HandleRegister(db.UserStore())
+	f := HandleRegister(userDB, storageDB)
 
 	body := `{"username":"test","password":"C0mpleX_P@ssw0rd","email":"test1@test.com"}`
 
