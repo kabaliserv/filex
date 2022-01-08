@@ -2,14 +2,14 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/kabaliserv/filex/core"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 )
 
 const (
-	PasswordCost = 15
+	PasswordCost = 10
 )
 
 type CreateUser struct {
@@ -18,49 +18,50 @@ type CreateUser struct {
 	Email    string `json:"email"`
 }
 
-func HandleRegister(store core.UserStore) http.HandlerFunc {
+func HandleRegister(users core.UserStore, storages core.StorageStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Header.Get("Content-Type") != "application/json" {
-			w.WriteHeader(400)
-			// ERROR ...
+			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
 
 		var c CreateUser
 
 		if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-			w.WriteHeader(500)
-			// ERROR ...
+			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
 
 		if !ValidUserName(c.Username) || !ValidEmail(c.Email) || c.Password == "" {
-			w.WriteHeader(403)
-			// Error ...
+			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
 
-		p, err := bcrypt.GenerateFromPassword([]byte(c.Password), PasswordCost)
+		fromPassword, err := bcrypt.GenerateFromPassword([]byte(c.Password), PasswordCost)
 
 		if err != nil {
-			w.WriteHeader(500)
-			// ERROR ...
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		u := core.User{
+		user := core.User{
 			Username:     c.Username,
-			PasswordHash: string(p),
+			PasswordHash: string(fromPassword),
 			Email:        c.Email,
 		}
 
-		_, err = store.InsertUser(u)
+		if err := users.Add(&user); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Error(err)
+			return
+		}
 
-		if err != nil {
-			w.WriteHeader(500)
-			fmt.Println("insert ERROR")
-			// ERROR ...
+		storage := core.Storage{UserID: user.ID}
+
+		if err := storages.Add(&storage); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Error(err)
 			return
 		}
 

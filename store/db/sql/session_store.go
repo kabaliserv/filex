@@ -24,8 +24,8 @@ func newSessionStore(db *gorm.DB, secret string) *sessionStore {
 func (st *sessionStore) Get(r *http.Request) *core.Session {
 	so, _ := st.Store.Get(r, sessionName)
 	s := core.Session{Session: so}
-	s.Save = func(r *http.Request, w http.ResponseWriter) error {
-		return st.Store.Save(r, w, so)
+	s.Save = func(rr *http.Request, w http.ResponseWriter) error {
+		return st.Store.Save(rr, w, so)
 	}
 	return &s
 }

@@ -15,6 +15,7 @@ type (
 		Storage  Storage
 		Server   Server
 		Session  Session
+		Guest    Guest
 	}
 
 	Database struct {
@@ -64,6 +65,11 @@ type (
 		Timeout time.Duration `envconfig:"FILEX_COOKIE_TIMEOUT" default:"720h"`
 		Secret  string        `envconfig:"FILEX_COOKIE_SECRET"`
 		Secure  bool          `envconfig:"FILEX_COOKIE_SECURE"`
+	}
+
+	Guest struct {
+		AllowUpload   bool  `envconfig:"FILEX_GUEST_ALLOW_UPLOAD" default:"true"`
+		MaxUploadSize int64 `envconfig:"FILEX_GUEST_UPLOAD_MAX_SIZE" default:"2097152"`
 	}
 )
 

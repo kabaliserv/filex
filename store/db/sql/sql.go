@@ -8,11 +8,12 @@ import (
 )
 
 type Store struct {
-	db           *gorm.DB
-	userStore    *UserDBStore
-	accessStore  *AccessDBStore
-	sessionStore *sessionStore
-	fileStore    *fileStore
+	db             *gorm.DB
+	userStore      *UserDB
+	accessStore    *AccessDBStore
+	sessionStore   *sessionStore
+	fileStore      *fileStore
+	storageStorage *storageDB
 }
 
 func New(option core.StoreOption) core.Store {
@@ -24,11 +25,12 @@ func New(option core.StoreOption) core.Store {
 	datafileStore := files.New(option)
 
 	return &Store{
-		db:           db,
-		userStore:    newUserStore(db),
-		accessStore:  newAccessStore(db),
-		sessionStore: newSessionStore(db, option.SessionSecret),
-		fileStore:    newFileStore(db, datafileStore),
+		db:             db,
+		userStore:      newUserStore(db),
+		accessStore:    newAccessStore(db),
+		sessionStore:   newSessionStore(db, option.SessionSecret),
+		fileStore:      newFileStore(db, datafileStore),
+		storageStorage: newStorageStore(db),
 	}
 }
 
@@ -58,6 +60,10 @@ func (s *Store) SessionStore() core.SessionStore {
 
 func (s *Store) FileStore() core.FileStore {
 	return s.fileStore
+}
+
+func (s *Store) StorageStore() core.StorageStore {
+	return s.storageStorage
 }
 
 func migrateTable(db *gorm.DB, table interface{}) {

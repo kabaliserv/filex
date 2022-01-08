@@ -1,6 +1,10 @@
 package sql
 
-import "reflect"
+import (
+	"bytes"
+	"encoding/json"
+	"reflect"
+)
 
 type dataCompare map[string]interface{}
 
@@ -25,4 +29,14 @@ func getSaveChangeFunc(save saveFunc, value getValueFunc) func() error {
 		newVal := value()
 		return save(getChangedValue(oldVal, newVal))
 	}
+}
+
+func structToStruct(from interface{}, to interface{}) error {
+	v, err := json.Marshal(from)
+	if err != nil {
+		return err
+	}
+	reader := bytes.NewReader(v)
+	dec := json.NewDecoder(reader)
+	return dec.Decode(to)
 }

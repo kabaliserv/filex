@@ -17,65 +17,67 @@ type AccessToken struct {
 }
 
 func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.HandlerFunc {
-	f := func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		session := sessionStore.Get(r)
+		isAuth, authOk := session.Values["auth"].(bool)
+		userId, userOk := session.Values["userId"].(string)
 
-		if auth, ok := session.Values["auth"].(bool); ok && auth {
-			w.WriteHeader(204)
+		if authOk && userOk && isAuth && userId != "" {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
 		if r.Header.Get("Content-Type") != "application/json" {
-			// ERROR ...
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
 		var c Credential
 
 		if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-			// ERROR ...
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		var u *core.User
-		var err error
-
-		if ValidUserName(c.Username) {
-			u, err = userStore.GetUserByName(c.Username)
+		if c.Username == "" || c.Password == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
 		}
 
+		var user *core.User
+		var err error
+
 		if ValidEmail(c.Username) {
-			u, err = userStore.GetUserByEmail(c.Username)
+			user, err = userStore.GetByEmail(c.Username)
+		} else if ValidUserName(c.Username) {
+			user, err = userStore.GetByName(c.Username)
 		}
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			// ERROR ...
 			return
 		}
 
-		if u == nil {
+		if user == nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			// ERROR ...
 			return
 		}
 
-		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(c.Password)); err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(c.Password)); err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
 		session.Values["auth"] = true
+		session.Values["userId"] = user.ID
 
 		if err := session.Save(r, w); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			// ERROR ...
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
+
 		return
 	}
-
-	return f
 }

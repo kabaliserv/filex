@@ -2,6 +2,7 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"github.com/kabaliserv/filex/core"
 	"github.com/kabaliserv/filex/store/files"
 	"github.com/prometheus/common/log"
@@ -19,7 +20,8 @@ type fileSchema struct {
 
 type cacheSchema struct {
 	gorm.Model
-	FileId string
+	FileId   string
+	ClientId string
 }
 
 type fileStore struct {
@@ -54,8 +56,52 @@ func (f *fileStore) NewWithStorageId(fileId, storageId string) (*core.File, erro
 	return f.newFile(fileId, storageId)
 }
 
-func (f *fileStore) AddInCache(fileId string) error {
-	return f.cache.Create(&cacheSchema{FileId: fileId}).Error
+func (f *fileStore) GetInCache(fileId string) (*core.FileCache, error) {
+	cache := cacheSchema{FileId: fileId}
+	err := f.getInCache(&cache)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &core.FileCache{
+		FileID:   cache.FileId,
+		ClientID: cache.ClientId,
+	}, nil
+}
+
+func (f *fileStore) HasInCache(fileId string) bool {
+	return has(f.cache, &cacheSchema{FileId: fileId})
+}
+
+func (f *fileStore) AddInCache(fileId, clientId string) error {
+	return f.cache.Create(&cacheSchema{FileId: fileId, ClientId: clientId}).Error
+}
+
+func (f *fileStore) DelInCache(fileId string) error {
+	c := cacheSchema{FileId: fileId}
+	if err := f.getInCache(&c); err != nil {
+		return err
+	}
+	return f.cache.Unscoped().Delete(&c).Error
+}
+
+func (f *fileStore) GetInCacheByClientId(clientId string) (*core.FileCache, error) {
+	cache := cacheSchema{ClientId: clientId}
+	err := f.getInCache(&cache)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	t := core.FileCache{
+		FileID:   cache.FileId,
+		ClientID: cache.ClientId,
+	}
+
+	return &t, nil
 }
 
 func (f *fileStore) GetTusdStoreComposer() *tusd.StoreComposer {
@@ -109,6 +155,10 @@ func (f *fileStore) fileIsInCache(id string) bool {
 
 func (f *fileStore) hasFile(id string) bool {
 	return has(f.DB, &fileSchema{ID: id})
+}
+
+func (f *fileStore) getInCache(where *cacheSchema) error {
+	return f.cache.Where(where).First(where).Error
 }
 
 func create(db *gorm.DB, value interface{}) error {

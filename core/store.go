@@ -11,14 +11,8 @@ type (
 		AccessStore() AccessStore
 		SessionStore() SessionStore
 		FileStore() FileStore
+		StorageStore() StorageStore
 		CloseConnection() error
-	}
-
-	UserStore interface {
-		GetUserById(id string) (*User, error)
-		GetUserByName(name string) (*User, error)
-		GetUserByEmail(email string) (*User, error)
-		InsertUser(data User) (*User, error)
 	}
 
 	AccessStore interface {

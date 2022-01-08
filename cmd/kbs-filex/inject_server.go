@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
+	"github.com/kabaliserv/filex/core"
 	"github.com/kabaliserv/filex/handler/api"
 	"github.com/kabaliserv/filex/handler/web"
 	"github.com/kabaliserv/filex/server"
@@ -17,6 +18,7 @@ var serverSet = wire.NewSet(
 	provideRouter,
 	provideServer,
 	provideServerOptions,
+	provideUploadOptions,
 )
 
 func provideRouter(api api.Server, web web.Server) *chi.Mux {
@@ -24,6 +26,13 @@ func provideRouter(api api.Server, web web.Server) *chi.Mux {
 	r.Mount("/api", api.Handler())
 	r.Mount("/", web.Handler())
 	return r
+}
+
+func provideUploadOptions(config config.Config) core.UploadOption {
+	return core.UploadOption{
+		GuestAllow:         config.Guest.AllowUpload,
+		GuestMaxUploadSize: config.Guest.MaxUploadSize,
+	}
 }
 
 func provideServer(handler *chi.Mux, config config.Config) *server.Server {

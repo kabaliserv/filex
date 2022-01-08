@@ -15,3 +15,8 @@ type Upload struct {
 func (u *Upload) RequireAuth() bool {
 	return u.PasswordHash != ""
 }
+
+type UploadOption struct {
+	GuestAllow         bool
+	GuestMaxUploadSize int64
+}

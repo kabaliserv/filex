@@ -1,71 +1,45 @@
 package sql
 
 import (
+	"errors"
+	"github.com/fatih/structs"
 	"github.com/google/uuid"
 	"github.com/kabaliserv/filex/core"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type userSchema struct {
-	ID           string `gorm:"primaryKey;uniqueIndex"`
-	Username     string `gorm:"unique"`
-	PasswordHash string
-	Email        string
-	Role         int8
+	ID           string `json:"id" gorm:"primaryKey;uniqueIndex""`
+	Username     string `json:"username" gorm:"unique"`
+	PasswordHash string `json:"password_hash"`
+	Email        string `json:"email"`
+	Admin        bool   `json:"admin"`
 }
 
-type UserDBStore struct {
-	*gorm.DB
+type UserDB struct {
+	table *gorm.DB
 }
 
-func newUserStore(db *gorm.DB) *UserDBStore {
-	db.AutoMigrate(&userSchema{})
-	return &UserDBStore{db.Model(&userSchema{})}
+func newUserStore(db *gorm.DB) *UserDB {
+	table := db.Table("users")
+	table.AutoMigrate(&userSchema{})
+	return &UserDB{table}
 }
 
-func (s UserDBStore) GetUserById(id string) (*core.User, error) {
-
-	user := userSchema{ID: id}
-
-	if err := s.get(&user); err != nil {
-		return nil, err
-	}
-
-	userCore := s.toUserCore(user)
-
-	return &userCore, nil
-
+func (s *UserDB) Get(userId string) (*core.User, error) {
+	return s.get(userSchema{ID: userId})
 }
 
-func (s UserDBStore) GetUserByName(name string) (*core.User, error) {
-
-	user := userSchema{Username: name}
-
-	if err := s.get(&user); err != nil {
-		return nil, err
-	}
-
-	userCore := s.toUserCore(user)
-
-	return &userCore, nil
-
+func (s *UserDB) GetByName(name string) (*core.User, error) {
+	return s.get(userSchema{Username: name})
 }
 
-func (s UserDBStore) GetUserByEmail(email string) (*core.User, error) {
-
-	user := userSchema{Email: email}
-
-	if err := s.get(&user); err != nil {
-		return nil, err
-	}
-
-	userCore := s.toUserCore(user)
-
-	return &userCore, nil
-
+func (s *UserDB) GetByEmail(email string) (*core.User, error) {
+	return s.get(userSchema{Email: email})
 }
 
-func (s UserDBStore) InsertUser(data core.User) (*core.User, error) {
+func (s *UserDB) Add(user *core.User) error {
 
 	id := uuid.New()
 
@@ -76,68 +50,78 @@ func (s UserDBStore) InsertUser(data core.User) (*core.User, error) {
 		id = uuid.New()
 	}
 
-	user := s.fromUserCore(data)
+	var userSH userSchema
 
-	user.ID = id.String()
+	if err := structToStruct(*user, &userSH); err != nil {
+		return err
+	}
 
-	if err := s.create(&user); err != nil {
+	userSH.ID = id.String()
+	userSH.PasswordHash = user.PasswordHash
+
+	if err := s.table.Create(&userSH).Error; err != nil {
+		return err
+	}
+
+	if err := structToStruct(userSH, user); err != nil {
+		return err
+	}
+
+	if err := s.injectSaveHandle(user); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserDB) Has(userId string) bool {
+	var c int64
+	s.table.Where(&userSchema{ID: userId}).Count(&c)
+	return c > 0
+}
+
+func (s *UserDB) get(where userSchema) (*core.User, error) {
+
+	var userSH userSchema
+	err := s.table.Where(&where).Find(&userSH).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	userCore := s.toUserCore(user)
+	var user core.User
 
-	return &userCore, nil
-
-}
-
-func (s UserDBStore) Has(id string) bool {
-
-	var c int64
-
-	s.Where(&userSchema{ID: id}).Count(&c)
-
-	return c > 0
-
-}
-
-func (s UserDBStore) create(v *userSchema) error {
-
-	return s.Create(v).Error
-
-}
-
-func (s UserDBStore) get(v *userSchema) error {
-
-	return s.Where(v).First(v).Error
-
-}
-
-func (s UserDBStore) save(id string, v map[string]interface{}) error {
-
-	return s.Where(&userSchema{ID: id}).Updates(v).Error
-
-}
-
-func (s UserDBStore) fromUserCore(u core.User) userSchema {
-
-	return userSchema{
-		ID:           u.ID,
-		Username:     u.Username,
-		PasswordHash: u.PasswordHash,
-		Email:        u.Email,
-		Role:         u.Role,
+	if err := structToStruct(&userSH, &user); err != nil {
+		return nil, err
 	}
 
-}
-
-func (s UserDBStore) toUserCore(u userSchema) core.User {
-
-	return core.User{
-		ID:           u.ID,
-		Username:     u.Username,
-		PasswordHash: u.PasswordHash,
-		Email:        u.Email,
-		Role:         u.Role,
+	if err := s.injectSaveHandle(&user); err != nil {
+		return nil, err
 	}
 
+	user.PasswordHash = userSH.PasswordHash
+
+	return &user, nil
+}
+
+func (s *UserDB) injectSaveHandle(user *core.User) error {
+	id := user.ID
+	getValue := func() map[string]interface{} {
+		var userSH userSchema
+		if err := structToStruct(user, &userSH); err != nil {
+			log.Error(err)
+		}
+
+		return structs.Map(userSH)
+	}
+
+	saveValue := func(v map[string]interface{}) error {
+		return s.table.Where(&userSchema{ID: id}).Save(v).Error
+	}
+
+	user.Save = getSaveChangeFunc(saveValue, getValue)
+
+	return nil
 }
