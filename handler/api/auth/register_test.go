@@ -2,7 +2,9 @@ package auth
 
 import (
 	"github.com/kabaliserv/filex/core"
-	"github.com/kabaliserv/filex/store/db/sql"
+	userStore "github.com/kabaliserv/filex/store/users"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,11 +18,22 @@ func TestGoodRequest(t *testing.T) {
 		DatabaseEndpoint:   "file::memory:?cache=shared",
 	}
 
-	db := sql.New(options)
-	userDB := db.UserStore()
-	storageDB := db.StorageStore()
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	f := HandleRegister(userDB, storageDB)
+	rawDB, err := db.DB()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer rawDB.Close()
+
+	users := userStore.NewUserStore(db, options)
+
+	f := HandleRegister(users)
 
 	body := `{"username":"test","password":"C0mpleX_P@ssw0rd","email":"test1@test.com"}`
 
@@ -33,12 +46,6 @@ func TestGoodRequest(t *testing.T) {
 
 	res := w.Result()
 	defer res.Body.Close()
-	defer func(db core.Store) {
-		err := db.CloseConnection()
-		if err != nil {
-			t.Error(err)
-		}
-	}(db)
 
 	if httpCode := res.StatusCode; httpCode != http.StatusNoContent {
 		t.Errorf("expected http code 204 got %v", httpCode)

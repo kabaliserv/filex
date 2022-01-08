@@ -4,28 +4,34 @@ import tusd "github.com/tus/tusd/pkg/handler"
 
 type (
 	File struct {
-		ID        string
+		ID        string // uuid
 		Name      string
 		Type      string
 		Size      int64
-		StorageID string
-		Delete    func() error
+		StorageID string // null if is uploaded by guest user
 	}
 
 	FileCache struct {
-		FileID   string
-		ClientID string
+		ID              string // uuid
+		ContextUploadID string // uuid
 	}
 
 	FileStore interface {
-		Get(fileId string) (*File, error)
-		New(fileId string) (*File, error)
-		NewWithStorageId(fileId, storageId string) (*File, error)
-		GetInCache(fileId string) (*FileCache, error)
-		AddInCache(fileId string, clientId string) error
-		HasInCache(fileId string) bool
-		DelInCache(fileId string) error
-		GetInCacheByClientId(clientId string) (*FileCache, error)
-		GetTusdStoreComposer() *tusd.StoreComposer
+		Find(filter *File) ([]*File, error)
+		FindById(id string) (*File, error)
+		Create(*File) error
+		CreateFromCache(id string) error
+		Update(*File) error
+		Delete(*File) error
+		DeleteById(id string) error
+
+		FindInCache(filter *FileCache) ([]*FileCache, error)
+		FindInCacheById(id string) (*FileCache, error)
+		CreateInCache(*FileCache) error
+		UpdateInCache(*FileCache) error
+		DeleteInCache(*FileCache) error
+		DeleteInCacheById(fileId string) error
+
+		TusdStoreComposer() *tusd.StoreComposer
 	}
 )

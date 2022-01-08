@@ -37,7 +37,7 @@ func (a ACL) Middleware(next http.Handler) http.Handler {
 		userId, ok := session.Values["userId"].(string)
 
 		if ok && userId != "" {
-			user, err := a.users.Get(userId)
+			user, err := a.users.FindOne(userId)
 			if err == nil {
 				ctx = context.WithValue(ctx, "user", user)
 			}
@@ -92,19 +92,21 @@ func (a ACL) SecureUpload(next http.Handler) http.Handler {
 				return
 			}
 
-			clientId := token.Issuer()
-			req.Header.Add("clientId", clientId)
+			contextUploadId := token.Issuer()
+			req.Header.Add("filex-context-upload-id", contextUploadId)
 
 			// check if the upload was initiated by the customer
 			if req.Method == "PATCH" {
-				fileCache, err := a.files.GetInCacheByClientId(clientId)
-				if err != nil {
+				filesCache, err := a.files.FindInCache(&core.FileCache{ContextUploadID: contextUploadId})
+				if err != nil || len(filesCache) == 0 {
 					log.Error(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 
-				if fileCache == nil || fileCache.ClientID != clientId {
+				fileCache := filesCache[0]
+
+				if fileCache == nil || fileCache.ContextUploadID != contextUploadId {
 					rw.WriteHeader(http.StatusUnauthorized)
 					return
 				}

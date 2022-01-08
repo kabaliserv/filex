@@ -1,13 +1,18 @@
 package auth
 
 import (
-	"github.com/kabaliserv/filex/core"
-	"github.com/kabaliserv/filex/store/db/sql"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/kabaliserv/filex/core"
+	sessionStore "github.com/kabaliserv/filex/store/sessions"
+	userStore "github.com/kabaliserv/filex/store/users"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestLoginWithUsername(t *testing.T) {
@@ -17,21 +22,25 @@ func TestLoginWithUsername(t *testing.T) {
 		DatabaseEndpoint:   "file::memory:?cache=shared",
 	}
 
-	db := sql.New(options)
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	defer func(db core.Store) {
-		err := db.CloseConnection()
-		if err != nil {
-			t.Error(err)
-		}
-	}(db)
+	rawDB, err := db.DB()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer rawDB.Close()
 
-	userDB := db.UserStore()
-	sessionDB := db.SessionStore()
+	users := userStore.NewUserStore(db, options)
+	sessions := sessionStore.NewSessionStore(db, "Secret-123")
 
 	p, err := bcrypt.GenerateFromPassword([]byte("C0mpleX_P@ssw0rd"), PasswordCost)
 
-	err = userDB.Add(&core.User{
+	err = users.Create(&core.User{
 		Username:     "test",
 		Email:        "test@gmail.com",
 		PasswordHash: string(p),
@@ -41,7 +50,7 @@ func TestLoginWithUsername(t *testing.T) {
 		t.Error(err)
 	}
 
-	f := HandleLogin(userDB, sessionDB)
+	f := HandleLogin(users, sessions)
 
 	{ // test login with username
 		body := `{"username":"test","password":"C0mpleX_P@ssw0rd"}`
@@ -69,21 +78,25 @@ func TestLoginWithEmail(t *testing.T) {
 		DatabaseEndpoint:   "file::memory:?cache=shared",
 	}
 
-	db := sql.New(options)
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	defer func(db core.Store) {
-		err := db.CloseConnection()
-		if err != nil {
-			t.Error(err)
-		}
-	}(db)
+	rawDB, err := db.DB()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer rawDB.Close()
 
-	userDB := db.UserStore()
-	sessionDB := db.SessionStore()
+	users := userStore.NewUserStore(db, options)
+	sessions := sessionStore.NewSessionStore(db, "Secret-123")
 
 	p, err := bcrypt.GenerateFromPassword([]byte("C0mpleX_P@ssw0rd"), PasswordCost)
 
-	err = userDB.Add(&core.User{
+	err = users.Create(&core.User{
 		Username:     "test",
 		Email:        "test@gmail.com",
 		PasswordHash: string(p),
@@ -93,9 +106,9 @@ func TestLoginWithEmail(t *testing.T) {
 		t.Error(err)
 	}
 
-	f := HandleLogin(userDB, sessionDB)
+	f := HandleLogin(users, sessions)
 
-	{ // test login with email
+	{ // test login with username
 		body := `{"username":"test@gmail.com","password":"C0mpleX_P@ssw0rd"}`
 
 		req := httptest.NewRequest("POST", "/fake", strings.NewReader(body))
@@ -111,5 +124,4 @@ func TestLoginWithEmail(t *testing.T) {
 			t.Errorf("expected http code 204 got %v", httpCode)
 		}
 	}
-
 }

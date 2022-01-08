@@ -11,16 +11,25 @@ import (
 	"github.com/kabaliserv/filex/handler/api"
 	"github.com/kabaliserv/filex/handler/web"
 	"github.com/kabaliserv/filex/service/token"
+	"github.com/kabaliserv/filex/store/files"
+	"github.com/kabaliserv/filex/store/sessions"
+	"github.com/kabaliserv/filex/store/users"
 )
 
 // Injectors from wire.go:
 
 func InitializeApplication(config2 config.Config) (application, error) {
-	storeOption := provideStoreOption(config2)
-	store := provideStore(storeOption)
 	uploadOption := provideUploadOptions(config2)
 	manager := token.New()
-	server := api.New(store, uploadOption, manager)
+	storeOption := provideStoreOption(config2)
+	db, err := provideDatabase(storeOption)
+	if err != nil {
+		return application{}, err
+	}
+	userStore := users.NewUserStore(db, storeOption)
+	sessionStore := sessions.NewSessionStore(db, storeOption)
+	fileStore := files.NewFileStore(db, storeOption)
+	server := api.New(uploadOption, manager, userStore, sessionStore, fileStore)
 	options := provideServerOptions(config2)
 	webServer := web.New(options)
 	mux := provideRouter(server, webServer)

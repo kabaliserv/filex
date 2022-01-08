@@ -48,9 +48,9 @@ func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.
 		var err error
 
 		if ValidEmail(c.Username) {
-			user, err = userStore.GetByEmail(c.Username)
+			user, err = userStore.FindByEmail(c.Username)
 		} else if ValidUserName(c.Username) {
-			user, err = userStore.GetByName(c.Username)
+			user, err = userStore.FindByName(c.Username)
 		}
 
 		if err != nil {

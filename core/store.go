@@ -7,7 +7,6 @@ import (
 
 type (
 	Store interface {
-		UserStore() UserStore
 		AccessStore() AccessStore
 		SessionStore() SessionStore
 		FileStore() FileStore

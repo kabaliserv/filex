@@ -1,29 +1,42 @@
 package main
 
 import (
+	"errors"
 	"github.com/google/wire"
 	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
 	"github.com/kabaliserv/filex/core"
-	"github.com/kabaliserv/filex/store/db/sql"
-	"log"
+	"github.com/kabaliserv/filex/store/files"
+	"github.com/kabaliserv/filex/store/sessions"
+	"github.com/kabaliserv/filex/store/users"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var storeSet = wire.NewSet(
-	provideStore,
 	provideStoreOption,
+	provideDatabase,
+	files.NewFileStore,
+	users.NewUserStore,
+	sessions.NewSessionStore,
 )
 
-func provideStore(option core.StoreOption) core.Store {
-	var store core.Store
+func provideDatabase(option core.StoreOption) (*gorm.DB, error) {
+	var connector gorm.Dialector
 
 	switch option.DatabaseDriver {
-	case "sqlite3", "mysql", "postgres":
-		store = sql.New(option)
+	case "postgres":
+		connector = postgres.Open(option.DatabaseEndpoint)
+	case "mysql":
+		connector = mysql.Open(option.DatabaseEndpoint)
+	case "sqlite3":
+		connector = sqlite.Open(option.DatabaseEndpoint)
 	default:
-		log.Fatalln("invalid database driver :", option.DatabaseDriver)
+		return nil, errors.New("invalid database driver")
 	}
 
-	return store
+	return gorm.Open(connector, &gorm.Config{})
 }
 
 func provideStoreOption(config config.Config) core.StoreOption {

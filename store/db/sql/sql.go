@@ -8,8 +8,8 @@ import (
 )
 
 type Store struct {
-	db             *gorm.DB
-	userStore      *UserDB
+	db *gorm.DB
+	//userStore      *UserDB
 	accessStore    *AccessDBStore
 	sessionStore   *sessionStore
 	fileStore      *fileStore
@@ -25,8 +25,8 @@ func New(option core.StoreOption) core.Store {
 	datafileStore := files.New(option)
 
 	return &Store{
-		db:             db,
-		userStore:      newUserStore(db),
+		db: db,
+		//userStore:      newUserStore(db),
 		accessStore:    newAccessStore(db),
 		sessionStore:   newSessionStore(db, option.SessionSecret),
 		fileStore:      newFileStore(db, datafileStore),
@@ -44,10 +44,6 @@ func (s *Store) CloseConnection() error {
 		return err
 	}
 	return db.Close()
-}
-
-func (s *Store) UserStore() core.UserStore {
-	return s.userStore
 }
 
 func (s *Store) AccessStore() core.AccessStore {

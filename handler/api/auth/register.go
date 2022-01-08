@@ -18,7 +18,7 @@ type CreateUser struct {
 	Email    string `json:"email"`
 }
 
-func HandleRegister(users core.UserStore, storages core.StorageStore) http.HandlerFunc {
+func HandleRegister(users core.UserStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Header.Get("Content-Type") != "application/json" {
@@ -49,17 +49,13 @@ func HandleRegister(users core.UserStore, storages core.StorageStore) http.Handl
 			Username:     c.Username,
 			PasswordHash: string(fromPassword),
 			Email:        c.Email,
+			Storage: core.UserStorage{
+				Size:  0,
+				Quota: 1073741824, // 1GB
+			},
 		}
 
-		if err := users.Add(&user); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Error(err)
-			return
-		}
-
-		storage := core.Storage{UserID: user.ID}
-
-		if err := storages.Add(&storage); err != nil {
+		if err := users.Create(&user); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Error(err)
 			return
