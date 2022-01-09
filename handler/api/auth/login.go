@@ -8,7 +8,7 @@ import (
 )
 
 type Credential struct {
-	Username string `json:"username"`
+	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
@@ -39,7 +39,7 @@ func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.
 			return
 		}
 
-		if c.Username == "" || c.Password == "" {
+		if c.Login == "" || c.Password == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -47,10 +47,10 @@ func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.
 		var user *core.User
 		var err error
 
-		if ValidEmail(c.Username) {
-			user, err = userStore.FindByEmail(c.Username)
-		} else if ValidUserName(c.Username) {
-			user, err = userStore.FindByName(c.Username)
+		if ValidEmail(c.Login) {
+			user, err = userStore.FindByEmail(c.Login)
+		} else if ValidUserName(c.Login) {
+			user, err = userStore.FindByLogin(c.Login)
 		}
 
 		if err != nil {

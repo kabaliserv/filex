@@ -17,7 +17,7 @@ func HandlerGetMe(manager token.Manager, files core.FileStore) http.HandlerFunc 
 		token.Set(jwt.SubjectKey, `upload file`)
 		token.Set(jwt.ExpirationKey, time.Now().Add(time.Second*5))
 
-		if user, ok := ctx.Value("user").(*core.User); ok && user != nil {
+		if user, ok := ctx.Value(core.User{}).(*core.User); ok && user != nil {
 			token.Set("user_id", user.ID)
 		}
 

@@ -12,7 +12,7 @@ const onInputChange = async (e: Event) => {
   let file = target.files[0];
 
   const headers: {[p: string]: string} = {}
-  const token = await fetch("/api/auth/upload", { method: "Post" }).then(res => {
+  const token = await fetch("/api/files/request", { method: "Post" }).then(res => {
     if (res.ok) return res.text()
     return ""
   })
@@ -30,6 +30,7 @@ const onInputChange = async (e: Event) => {
     metadata: {
       filename: file.name,
       filetype: file.type,
+      "storage_id": "cc76e178-fe83-493b-821d-b22804c82335",
     },
     onError: function (error) {
       console.log("Failed because: " + error);
@@ -74,7 +75,7 @@ const password = ref("123456789")
 
 const onSubmit = async () => {
   const body = JSON.stringify({
-    username: username.value,
+    login: username.value,
     password: password.value,
   })
   const res = await fetch("/api/auth/login", {

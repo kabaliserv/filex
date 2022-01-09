@@ -7,6 +7,7 @@ import (
 	"github.com/kabaliserv/filex/core"
 	acl "github.com/kabaliserv/filex/handler/api/acl"
 	"github.com/kabaliserv/filex/handler/api/auth"
+	"github.com/kabaliserv/filex/handler/api/files"
 	"github.com/kabaliserv/filex/handler/api/users"
 	"github.com/kabaliserv/filex/service/token"
 	"net/http"
@@ -29,7 +30,7 @@ var corsOpts = cors.Options{
 
 type Server struct {
 	uploadOpt core.UploadOption
-	manager   token.Manager
+	tokens    token.Manager
 	users     core.UserStore
 	sessions  core.SessionStore
 	files     core.FileStore
@@ -37,14 +38,14 @@ type Server struct {
 
 func New(
 	uploadOpt core.UploadOption,
-	manager token.Manager,
+	tokens token.Manager,
 	users core.UserStore,
 	sessions core.SessionStore,
 	files core.FileStore,
 ) Server {
 	return Server{
 		uploadOpt: uploadOpt,
-		manager:   manager,
+		tokens:    tokens,
 		users:     users,
 		sessions:  sessions,
 		files:     files,
@@ -54,12 +55,16 @@ func New(
 func (s Server) Handler() http.Handler {
 	r := chi.NewRouter()
 
-	c := cors.New(corsOpts)
-	r.Use(c.Handler)
+	//c := cors.New(corsOpts)
+	//r.Use(c.Handler)
 
-	permission := acl.New(s.sessions, s.users, s.files, s.manager)
-	r.Use(permission.Middleware)
+	permission := acl.New(s.sessions, s.users, s.files, s.tokens)
+	filesHandler := files.NewFilesHandler(s.uploadOpt, s.files, s.users, s.tokens)
 	r.Use(middleware.NoCache)
+	r.Use(middleware.Recoverer)
+	r.Use(permission.Middleware)
+
+	//r.Use(permission.Middleware)
 
 	r.Route("/auth", func(rr chi.Router) {
 
@@ -69,6 +74,7 @@ func (s Server) Handler() http.Handler {
 	})
 
 	r.Route("/users", func(r chi.Router) {
+		//r.Use(permission.Middleware)
 
 		r.With(permission.AdminUserRequired).
 			Get("/", users.HandlerGetAll(s.users))
@@ -80,6 +86,21 @@ func (s Server) Handler() http.Handler {
 
 			r.Get("/", users.HandlerGetOne(s.users))
 			//r.Patch("/")
+
+		})
+	})
+
+	r.Route("/files", func(r chi.Router) {
+		r.Use(filesHandler.SecureUploadMiddleware)
+		r.With(permission.AdminUserRequired).
+			Get("/", filesHandler.GetAllFile)
+		r.Post("/", filesHandler.PostFile)
+		r.Post("/request", filesHandler.HandlerRequestUpload)
+		r.Route("/{id:[-+a-z0-9]+}", func(r chi.Router) {
+			r.Get("/", filesHandler.GetFile)
+			r.Head("/", filesHandler.HeadFile)
+			r.Patch("/", filesHandler.PatchFile)
+			r.Delete("/", filesHandler.DelFile)
 
 		})
 	})

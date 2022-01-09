@@ -3,6 +3,7 @@ package users
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/kabaliserv/filex/core"
 	"github.com/prometheus/common/log"
 	"net/http"
@@ -18,7 +19,7 @@ func HandlerGetMe() http.HandlerFunc {
 
 		ctx := r.Context()
 
-		user, ok := ctx.Value("user").(*core.User)
+		user, ok := ctx.Value(core.User{}).(*core.User)
 		if ok {
 			res["auth"] = true
 			res["userId"] = user.ID
@@ -40,7 +41,7 @@ func HandlerGetMe() http.HandlerFunc {
 func HandlerGetAll(users core.UserStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		allUsers, err := users.Find(&core.User{})
+		allUsers, err := users.Find(core.User{})
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Error(err)
@@ -73,13 +74,19 @@ func HandlerGetAll(users core.UserStore) http.HandlerFunc {
 
 func HandlerGetOne(users core.UserStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId := chi.URLParam(r, "userId")
-		if userId == "" {
+		userIdString := chi.URLParam(r, "userId")
+		if userIdString == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		user, err := users.FindOne(userId)
+		userId, err := uuid.Parse(userIdString)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		user, err := users.FindByUUID(userId)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Error(err)
@@ -123,9 +130,9 @@ func HandlerPost(users core.UserStore) http.HandlerFunc {
 
 		// Code de verification de l'utilisateur à faire ...
 
-		user.ID = ""
-		user.Storage.ID = ""
-		user.Storage.UserID = ""
+		user.ID = 0
+		user.Storage.ID = 0
+		user.Storage.UserID = 0
 
 		if user.Storage.EnableQuota && user.Storage.Quota == 0 {
 			user.Storage.Quota = 1073741824 // 1GB
