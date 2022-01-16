@@ -32,7 +32,8 @@ func InitializeApplication(config2 config.Config) (application, error) {
 	server := api.New(uploadOption, manager, userStore, sessionStore, fileStore)
 	options := provideServerOptions(config2)
 	webServer := web.New(options)
-	mux := provideRouter(server, webServer)
+	mainHealthzHandler := provideHealthz()
+	mux := provideRouter(server, webServer, mainHealthzHandler)
 	serverServer := provideServer(mux, config2)
 	mainApplication := newApplication(serverServer)
 	return mainApplication, nil

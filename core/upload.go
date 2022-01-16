@@ -8,8 +8,17 @@ type Upload struct {
 	PasswordHash       string
 	CreatedAt          time.Time
 	Duration           time.Duration
+	Active             bool
 	RemoveFileOnExpire bool
-	Delete             func() error
+}
+
+type UploadStore interface {
+	Find(where Upload) ([]*Upload, error)
+	FindById(id string) (*Upload, error)
+	Create(upload *Upload) error
+	Save(upload *Upload) error
+	Delete(upload *Upload) error
+	DeleteById(id string) error
 }
 
 func (u *Upload) RequireAuth() bool {

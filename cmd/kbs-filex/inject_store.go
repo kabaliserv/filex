@@ -7,6 +7,7 @@ import (
 	"github.com/kabaliserv/filex/core"
 	"github.com/kabaliserv/filex/store/files"
 	"github.com/kabaliserv/filex/store/sessions"
+	"github.com/kabaliserv/filex/store/upload"
 	"github.com/kabaliserv/filex/store/users"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -20,6 +21,7 @@ var storeSet = wire.NewSet(
 	files.NewFileStore,
 	users.NewUserStore,
 	sessions.NewSessionStore,
+	upload.NewUploadStore,
 )
 
 func provideDatabase(option core.StoreOption) (*gorm.DB, error) {
