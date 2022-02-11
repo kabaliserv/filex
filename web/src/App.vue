@@ -1,14 +1,20 @@
-<script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import HelloWorld from './components/HelloWorld.vue'
-import TusClient from "./components/Tusd.vue";
+
+<script lang="ts" setup>
+import {HeaderBar, SideBar} from "@/components";
+import {Fragment} from "vue";
 </script>
 
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Hello Vue 3 + TypeScript + Vite" />
-  <TusClient />
+  <div v-if="true" id="app">
+    <HeaderBar />
+    <main>
+      <div class="main-wrapper">
+<!--        <SideBar class="sidebar"/>-->
+        <router-view class="pages-view"></router-view>
+      </div>
+    </main>
+  </div>
+  <router-view v-else></router-view>
 </template>
 
 <style>
@@ -16,8 +22,30 @@ import TusClient from "./components/Tusd.vue";
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center ;
+  /*text-align: center ;*/
   color: #2c3e50;
-  margin-top: 60px;
+}
+main {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  flex: 1;
+}
+
+.main-wrapper {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+
+.sidebar {
+  width: 200px;
+  height: 100%;
+  /*background-color: deepskyblue;*/
+}
+
+.pages-view {
+  flex: 1 1 auto ;
+  height: 100%;
 }
 </style>

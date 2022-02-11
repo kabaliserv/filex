@@ -11,25 +11,33 @@ import (
 	"github.com/kabaliserv/filex/handler/api"
 	"github.com/kabaliserv/filex/handler/web"
 	"github.com/kabaliserv/filex/service/token"
+	"github.com/kabaliserv/filex/storage"
+	"github.com/kabaliserv/filex/store/access"
 	"github.com/kabaliserv/filex/store/files"
 	"github.com/kabaliserv/filex/store/sessions"
+	storage2 "github.com/kabaliserv/filex/store/storage"
+	"github.com/kabaliserv/filex/store/upload"
 	"github.com/kabaliserv/filex/store/users"
 )
 
 // Injectors from wire.go:
 
 func InitializeApplication(config2 config.Config) (application, error) {
-	uploadOption := provideUploadOptions(config2)
-	manager := token.New()
 	storeOption := provideStoreOption(config2)
 	db, err := provideDatabase(storeOption)
 	if err != nil {
 		return application{}, err
 	}
-	userStore := users.NewUserStore(db, storeOption)
+	fileStoreComposer := storage.New(storeOption)
+	fileStore := files.NewFileStore(db, storeOption, fileStoreComposer)
 	sessionStore := sessions.NewSessionStore(db, storeOption)
-	fileStore := files.NewFileStore(db, storeOption)
-	server := api.New(uploadOption, manager, userStore, sessionStore, fileStore)
+	storageStore := storage2.NewStorageStore(db, storeOption)
+	manager := token.New()
+	uploadOption := provideUploadOptions(config2)
+	uploadStore := upload.NewUploadStore(db, storeOption)
+	userStore := users.NewUserStore(db, storeOption)
+	accessUploadStore := access.NewAccessUploadStore(db, storeOption)
+	server := api.New(fileStore, sessionStore, storageStore, manager, uploadOption, uploadStore, userStore, accessUploadStore, fileStoreComposer)
 	options := provideServerOptions(config2)
 	webServer := web.New(options)
 	mainHealthzHandler := provideHealthz()

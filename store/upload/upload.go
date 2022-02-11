@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/kabaliserv/filex/core"
 	gonanoid "github.com/matoous/go-nanoid"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -12,6 +13,9 @@ type uploadStore struct {
 }
 
 func NewUploadStore(db *gorm.DB, options core.StoreOption) core.UploadStore {
+	if err := db.AutoMigrate(&core.Upload{}); err != nil {
+		log.Panicf("error on migrate user_storages table: %#v", err)
+	}
 	return &uploadStore{db: db}
 }
 
@@ -27,7 +31,7 @@ func (u uploadStore) Find(where core.Upload) (uploads []*core.Upload, err error)
 }
 
 func (u uploadStore) FindById(id string) (upload *core.Upload, err error) {
-	result := u.db.Model(core.Upload{}).First(&upload, id)
+	result := u.db.Model(core.Upload{}).First(&upload, "id = ?", id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -46,7 +50,7 @@ func (u uploadStore) Create(upload *core.Upload) (err error) {
 		}
 	}
 	upload.ID = id
-	err = u.db.Model(core.Upload{}).Create(&upload).Error
+	err = u.db.Create(&upload).Error
 	return
 }
 

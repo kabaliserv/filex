@@ -12,12 +12,12 @@ services:
       - "..:/go/src/github.com/kabaliserv/filex"
       - "../tmp/serverData:/data"
     environment:
-      - FILEX_S3_BUCKET=filex
-      - FILEX_S3_ENDPOINT=http://minio:9000
+#      - FILEX_S3_BUCKET=filex
+#      - FILEX_S3_ENDPOINT=http://minio:9000
+#      - AWS_ACCESS_KEY=minio
+#      - AWS_SECRET_KEY=minio123
+#      - AWS_REGION=us-east-1
       - FILEX_COOKIE_SECRET=azertyuiopkjhdg54gr6t5d35g1gfdsqsdfghjk541561651616
-      - AWS_ACCESS_KEY=minio
-      - AWS_SECRET_KEY=minio123
-      - AWS_REGION=us-east-1
     depends_on:
       - minio
   web:

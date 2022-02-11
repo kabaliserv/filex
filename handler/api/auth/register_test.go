@@ -35,7 +35,7 @@ func TestGoodRequest(t *testing.T) {
 
 	f := HandleRegister(users)
 
-	body := `{"username":"test","password":"C0mpleX_P@ssw0rd","email":"test1@test.com"}`
+	body := `{"login":"test","password":"C0mpleX_P@ssw0rd","email":"test1@test.com"}`
 
 	req := httptest.NewRequest("POST", "/fake", strings.NewReader(body))
 	w := httptest.NewRecorder()

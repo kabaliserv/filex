@@ -3,11 +3,10 @@ package token
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"fmt"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -18,14 +17,12 @@ type Manager struct {
 func New() Manager {
 	p, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		fmt.Printf("failed to generate private key: %s\n", err)
-		os.Exit(1)
-	}
-	t := Manager{
-		privateKey: p,
+		log.Panicf("failed to generate private key: %s\n", err)
 	}
 
-	return t
+	return Manager{
+		privateKey: p,
+	}
 }
 
 func (t *Manager) NewToken() jwt.Token {
@@ -53,6 +50,11 @@ func (t *Manager) getTokenFromHeaders(h http.Header) (jwt.Token, error) {
 
 	return t.parsePayload(tokenSigned)
 }
+
+func (t *Manager) FromString(token string) (jwt.Token, error) {
+	return t.parsePayload(token)
+}
+
 func (t *Manager) parsePayload(payload string) (jwt.Token, error) {
 	return jwt.Parse(
 		[]byte(payload),
@@ -62,6 +64,5 @@ func (t *Manager) parsePayload(payload string) (jwt.Token, error) {
 }
 
 func extractToken(v string) string {
-	fmt.Printf("token %#v", v)
 	return strings.TrimPrefix(v, "Bearer ")
 }

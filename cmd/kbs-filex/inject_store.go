@@ -5,8 +5,10 @@ import (
 	"github.com/google/wire"
 	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
 	"github.com/kabaliserv/filex/core"
+	"github.com/kabaliserv/filex/store/access"
 	"github.com/kabaliserv/filex/store/files"
 	"github.com/kabaliserv/filex/store/sessions"
+	"github.com/kabaliserv/filex/store/storage"
 	"github.com/kabaliserv/filex/store/upload"
 	"github.com/kabaliserv/filex/store/users"
 	"gorm.io/driver/mysql"
@@ -22,6 +24,8 @@ var storeSet = wire.NewSet(
 	users.NewUserStore,
 	sessions.NewSessionStore,
 	upload.NewUploadStore,
+	access.NewAccessUploadStore,
+	storage.NewStorageStore,
 )
 
 func provideDatabase(option core.StoreOption) (*gorm.DB, error) {

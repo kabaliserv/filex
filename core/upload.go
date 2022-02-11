@@ -4,7 +4,7 @@ import "time"
 
 type Upload struct {
 	ID                 string
-	File               File
+	FileId             string
 	PasswordHash       string
 	CreatedAt          time.Time
 	Duration           time.Duration
@@ -28,4 +28,5 @@ func (u *Upload) RequireAuth() bool {
 type UploadOption struct {
 	GuestAllow         bool
 	GuestMaxUploadSize int64
+	GuestMaxDuration   time.Duration
 }

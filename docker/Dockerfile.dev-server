@@ -11,5 +11,6 @@ RUN curl -fLo install.sh https://raw.githubusercontent.com/cosmtrek/air/master/i
 
 ENV FILEX_DATABASE_DRIVER sqlite3
 ENV FILEX_DATABASE_DATASOURCE /data/database.sqlite
+ENV FILEX_STORAGE_LOCAL_PATH /data/files
 
 CMD air

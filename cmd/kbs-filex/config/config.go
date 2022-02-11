@@ -68,8 +68,9 @@ type (
 	}
 
 	Guest struct {
-		AllowUpload   bool  `envconfig:"FILEX_GUEST_ALLOW_UPLOAD" default:"true"`
-		MaxUploadSize int64 `envconfig:"FILEX_GUEST_UPLOAD_MAX_SIZE" default:"2097152"`
+		AllowUpload     bool          `envconfig:"FILEX_GUEST_ALLOW_UPLOAD" default:"true"`
+		MaxUploadSize   int64         `envconfig:"FILEX_GUEST_UPLOAD_MAX_SIZE" default:"2097152"`
+		MaxFileDuration time.Duration `envconfig:"FILEX_GUEST_UPLOAD_MAX_FILE_DURATION" default:"168h"`
 	}
 )
 

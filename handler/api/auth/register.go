@@ -40,7 +40,7 @@ func HandleRegister(users core.UserStore) http.HandlerFunc {
 		user := core.User{
 			Login: c.Login,
 			Email: c.Email,
-			Storage: core.UserStorage{
+			Storage: core.Storage{
 				Size:  0,
 				Quota: 1073741824, // 1GB
 			},
@@ -62,6 +62,11 @@ func HandleRegister(users core.UserStore) http.HandlerFunc {
 		}
 
 		user.PasswordHash = string(passwordHash)
+
+		res, err := http.Get("https://picsum.photos/200")
+		if err == nil {
+			user.Avatar = res.Request.URL.String()
+		}
 
 		if err := users.Create(&user); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

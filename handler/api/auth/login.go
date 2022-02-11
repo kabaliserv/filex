@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/kabaliserv/filex/core"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -16,13 +17,13 @@ type AccessToken struct {
 	AccessToken string `json:"access_token"`
 }
 
-func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.HandlerFunc {
+func HandleLogin(users core.UserStore, sessions core.SessionStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session := sessionStore.Get(r)
-		isAuth, authOk := session.Values["auth"].(bool)
+		session := sessions.Get(r)
+
 		userId, userOk := session.Values["userId"].(string)
 
-		if authOk && userOk && isAuth && userId != "" {
+		if userOk && userId != "" {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -44,22 +45,21 @@ func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.
 			return
 		}
 
-		var user *core.User
+		var user core.User
 		var err error
 
 		if ValidEmail(c.Login) {
-			user, err = userStore.FindByEmail(c.Login)
+			user, err = users.FindByEmail(c.Login)
 		} else if ValidUserName(c.Login) {
-			user, err = userStore.FindByLogin(c.Login)
+			user, err = users.FindByLogin(c.Login)
 		}
 
 		if err != nil {
+			if errors.Is(err, core.ErrNotFound) {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if user == nil {
-			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -68,7 +68,6 @@ func HandleLogin(userStore core.UserStore, sessionStore core.SessionStore) http.
 			return
 		}
 
-		session.Values["auth"] = true
 		session.Values["userId"] = user.ID
 
 		if err := session.Save(r, w); err != nil {

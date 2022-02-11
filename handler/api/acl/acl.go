@@ -2,7 +2,8 @@ package acl
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"github.com/go-chi/chi/v5"
 	"github.com/kabaliserv/filex/core"
 	"github.com/kabaliserv/filex/service/token"
 	log "github.com/sirupsen/logrus"
@@ -34,7 +35,7 @@ func (a ACL) Middleware(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		session := a.sessions.Get(r)
 
-		userId, ok := session.Values["userId"].(int64)
+		userId, ok := session.Values["userId"].(uint)
 
 		if !ok || userId == 0 {
 			next.ServeHTTP(w, r)
@@ -53,9 +54,9 @@ func (a ACL) UserRequired(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		_, ok := ctx.Value(core.User{}).(*core.User)
+		_, ok := ctx.Value(core.User{}).(core.User)
 		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
@@ -66,18 +67,35 @@ func (a ACL) UserRequired(next http.Handler) http.Handler {
 
 func (a ACL) AdminUserRequired(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
 
-		user, ok := ctx.Value(core.User{}).(*core.User)
-		fmt.Printf("%#v", user)
+		user, ok := r.Context().Value(core.User{}).(core.User)
 		if !ok || !user.Admin {
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(f)
+}
+
+func (a ACL) RequireSelfUserOrAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		user, ok := r.Context().Value(core.User{}).(core.User)
+		if !ok {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		userId := chi.URLParam(r, "userId")
+		if userId == "" || (userId != user.UUID && !user.Admin) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a ACL) SecureUpload(next http.Handler) http.Handler {
@@ -91,26 +109,29 @@ func (a ACL) SecureUpload(next http.Handler) http.Handler {
 				log.Error(err)
 				return
 			} else if token == nil {
-				rw.WriteHeader(http.StatusUnauthorized)
+				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
 
-			contextUploadId := token.Issuer()
-			req.Header.Add("filex-context-upload-id", contextUploadId)
+			FileID := token.Issuer()
+			req.Header.Add("filex-File-ID", FileID)
 
 			// check if the upload was initiated by the customer
 			if req.Method == "PATCH" {
-				filesCache, err := a.files.FindInCache(core.FileCache{ContextUploadID: contextUploadId})
-				if err != nil || len(filesCache) == 0 {
+				file, err := a.files.FindByUUID(FileID)
+				if err != nil {
+					if errors.Is(err, core.ErrNotFound) {
+						rw.WriteHeader(http.StatusUnauthorized)
+						return
+					}
+
 					log.Error(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 
-				fileCache := filesCache[0]
-
-				if fileCache == nil || fileCache.ContextUploadID != contextUploadId {
-					rw.WriteHeader(http.StatusUnauthorized)
+				if file.IsFinal {
+					rw.WriteHeader(http.StatusForbidden)
 					return
 				}
 			}

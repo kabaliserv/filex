@@ -14,6 +14,7 @@ func InitializeApplication(config config.Config) (application, error) {
 		token.New,
 		storeSet,
 		serverSet,
+		storageSet,
 		newApplication,
 	)
 	return application{}, nil

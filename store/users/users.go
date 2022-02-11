@@ -2,7 +2,6 @@ package users
 
 import (
 	"errors"
-	"github.com/google/uuid"
 	"github.com/kabaliserv/filex/core"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -18,19 +17,11 @@ func NewUserStore(db *gorm.DB, options core.StoreOption) core.UserStore {
 	if err := db.AutoMigrate(&core.User{}); err != nil {
 		log.Panicf("error on migrate users table: %#v", err)
 	}
-	if err := db.AutoMigrate(&core.UserStorage{}); err != nil {
-		log.Panicf("error on migrate user_storages table: %#v", err)
-	}
 	return &userStore{db: db, options: options}
 }
 
-func (u *userStore) table() *gorm.DB {
-	return u.db.Table("users").Joins("Storage")
-}
-
-func (u *userStore) Find(filter core.User) ([]*core.User, error) {
-	var users []*core.User
-	result := u.table().Where(filter).Find(&users)
+func (u *userStore) Find(filter core.User) (users []core.User, err error) {
+	result := u.db.Model(users).Where(filter).Preload("Storage").Find(&users)
 	if err := result.Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -41,59 +32,62 @@ func (u *userStore) Find(filter core.User) ([]*core.User, error) {
 	return users, nil
 }
 
-func (u *userStore) FindByID(id interface{}) (user *core.User, err error) {
+func (u *userStore) FindByUUID(uuid string) (user core.User, err error) {
 
-	if err := u.table().First(&user, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+	err = u.db.Model(user).Where(core.User{UUID: uuid}).Preload("Storage").Find(&user).Error
+
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		err = core.ErrNotFound
 	}
 
 	return
 }
 
-func (u *userStore) FindByUUID(id uuid.UUID) (*core.User, error) {
-	users, err := u.Find(core.User{UUID: id})
-	if err != nil {
-		return nil, err
-	} else if len(users) == 0 {
-		return nil, nil
+func (u *userStore) FindByID(id uint) (user core.User, err error) {
+
+	err = u.db.Model(user).Preload("Storage").First(&user, id).Error
+
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		err = core.ErrNotFound
 	}
-	return users[0], nil
+
+	return
 }
 
-func (u *userStore) FindByLogin(login string) (*core.User, error) {
-	users, err := u.Find(core.User{Login: login})
-	if err != nil {
-		return nil, err
-	} else if len(users) == 0 {
-		return nil, nil
+func (u *userStore) FindByLogin(login string) (user core.User, err error) {
+
+	err = u.db.Model(user).Where(core.User{Login: login}).Preload("Storage").Find(&user).Error
+
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		err = core.ErrNotFound
 	}
-	return users[0], nil
+
+	return
 }
 
-func (u *userStore) FindByEmail(email string) (*core.User, error) {
-	users, err := u.Find(core.User{Email: email})
-	if err != nil {
-		return nil, err
-	} else if len(users) == 0 {
-		return nil, nil
+func (u *userStore) FindByEmail(email string) (user core.User, err error) {
+
+	err = u.db.Model(user).Where(core.User{Email: email}).Preload("Storage").Find(&user).Error
+
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		err = core.ErrNotFound
 	}
-	return users[0], nil
+
+	return
 }
 
-func (u *userStore) Create(user *core.User) error {
-	if err := u.table().Create(user).Error; err != nil {
-		return err
-	}
-	return nil
+func (u *userStore) Create(user *core.User) (err error) {
+	err = u.db.Create(user).Error
+
+	return
 }
 
-func (u *userStore) Save(user *core.User) error {
-	return nil
+func (u *userStore) Save(user *core.User) (err error) {
+	return u.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(user).Error
 }
 
-func (u *userStore) Has(userId string) bool {
-	return false
+func (u *userStore) Has(id uint) bool {
+	var count int64
+	u.db.Where(core.User{ID: id}).Count(&count)
+	return count > 0
 }

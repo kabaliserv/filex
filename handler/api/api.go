@@ -1,15 +1,19 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/kabaliserv/filex/core"
 	acl "github.com/kabaliserv/filex/handler/api/acl"
 	"github.com/kabaliserv/filex/handler/api/auth"
+	"github.com/kabaliserv/filex/handler/api/download"
 	"github.com/kabaliserv/filex/handler/api/files"
+	"github.com/kabaliserv/filex/handler/api/upload"
 	"github.com/kabaliserv/filex/handler/api/users"
 	"github.com/kabaliserv/filex/service/token"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -29,151 +33,129 @@ var corsOpts = cors.Options{
 }
 
 type Server struct {
-	uploadOpt core.UploadOption
-	tokens    token.Manager
-	users     core.UserStore
-	sessions  core.SessionStore
-	files     core.FileStore
+	files          core.FileStore
+	sessions       core.SessionStore
+	storages       core.StorageStore
+	tokens         token.Manager
+	uploadOpt      core.UploadOption
+	uploads        core.UploadStore
+	users          core.UserStore
+	uploadAccesses core.AccessUploadStore
+	fileStorage    core.FileStoreComposer
 }
 
 func New(
-	uploadOpt core.UploadOption,
-	tokens token.Manager,
-	users core.UserStore,
-	sessions core.SessionStore,
 	files core.FileStore,
+	sessions core.SessionStore,
+	storages core.StorageStore,
+	tokens token.Manager,
+	uploadOpt core.UploadOption,
+	uploads core.UploadStore,
+	users core.UserStore,
+	uploadAccesses core.AccessUploadStore,
+	fileStorage core.FileStoreComposer,
 ) Server {
 	return Server{
-		uploadOpt: uploadOpt,
-		tokens:    tokens,
-		users:     users,
-		sessions:  sessions,
-		files:     files,
+		files:          files,
+		sessions:       sessions,
+		storages:       storages,
+		tokens:         tokens,
+		uploadOpt:      uploadOpt,
+		uploads:        uploads,
+		users:          users,
+		uploadAccesses: uploadAccesses,
+		fileStorage:    fileStorage,
 	}
 }
 
 func (s Server) Handler() http.Handler {
 	r := chi.NewRouter()
 
-	//c := cors.New(corsOpts)
-	//r.Use(c.Handler)
+	c := cors.New(corsOpts)
+	r.Use(c.Handler)
 
 	permission := acl.New(s.sessions, s.users, s.files, s.tokens)
-	filesHandler := files.NewFilesHandler(s.uploadOpt, s.files, s.users, s.tokens)
+	uploads := upload.NewUploadRouter(s.uploadOpt, s.files, s.users, s.tokens, s.uploads, s.uploadAccesses, s.storages, s.fileStorage)
+
 	r.Use(middleware.NoCache)
 	r.Use(middleware.Recoverer)
 	r.Use(permission.Middleware)
 
-	//r.Use(permission.Middleware)
+	r.Route("/access", func(r chi.Router) {
+		//r.Get("/upload")
+		//r.Get("/download")
+		r.Route("/requests", func(r chi.Router) {
+			//r.Post("/upload",)
+			//r.Post("/download")
+		})
+	})
 
-	r.Route("/auth", func(rr chi.Router) {
+	r.Route("/auth", func(r chi.Router) {
 
-		rr.Post("/login", auth.HandleLogin(s.users, s.sessions))
-		rr.Post("/signup", auth.HandleRegister(s.users))
+		r.Post("/login", auth.HandleLogin(s.users, s.sessions))
+		r.Post("/logout", auth.HandleLogout(s.sessions))
+		r.Post("/signup", auth.HandleRegister(s.users))
+		r.Get("/check", auth.HandlerCheckAuth(s.sessions))
 
 	})
 
-	r.Route("/users", func(r chi.Router) {
-		//r.Use(permission.Middleware)
+	r.Route("/files", func(r chi.Router) {
+		r.Use(permission.UserRequired)
 
+		r.Get("/", files.GetAll(s.files))
+
+		r.Route("/{fileId}", func(r chi.Router) {
+			r.Use(files.FileCtx(s.files))
+
+			r.Get("/", files.GetOne())
+			r.Delete("/", files.Delete(s.files, s.storages))
+
+			r.Get("/download", download.GetByFileCtx(s.files))
+
+		})
+	})
+
+	r.Route("/users", func(r chi.Router) {
 		r.With(permission.AdminUserRequired).
-			Get("/", users.HandlerGetAll(s.users))
+			Get("/", users.HandleGetAll(s.users))
 		r.With(permission.AdminUserRequired).
-			Post("/", users.HandlerPost(s.users))
+			Post("/", users.HandlePost(s.users))
 
 		r.Route("/{userId}", func(r chi.Router) {
-			r.Use(permission.UserRequired)
+			r.Use(permission.RequireSelfUserOrAdmin)
 
-			r.Get("/", users.HandlerGetOne(s.users))
+			r.Get("/", users.HandleGet(s.users))
+			r.Post("/change-password", users.HandleChangePassword(s.users))
+
 			//r.Patch("/")
 
 		})
 	})
 
-	r.Route("/files", func(r chi.Router) {
-		r.Use(filesHandler.SecureUploadMiddleware)
-		r.With(permission.AdminUserRequired).
-			Get("/", filesHandler.GetAllFile)
-		r.Post("/", filesHandler.PostFile)
-		r.Post("/request", filesHandler.HandlerRequestUpload)
-		r.Route("/{id:[-+a-z0-9]+}", func(r chi.Router) {
-			r.Get("/", filesHandler.GetFile)
-			r.Head("/", filesHandler.HeadFile)
-			r.Patch("/", filesHandler.PatchFile)
-			r.Delete("/", filesHandler.DelFile)
+	r.Mount("/upload", uploads.Handler())
 
-		})
-	})
+	r.Get("/me", users.HandleGetMe())
 
-	//r.Route("/me", func(rr chi.Router) {
-	//
-	//	rr.Use(permission.UserRequired)
-	//	rr.Get("/", users.HandlerGetMe())
-	//	rr.Get("/storage", storage.FindOneByUserId(storageDB))
-	//
-	//})
-	//
-	//r.Route("/users", func(rr chi.Router) {
-	//
-	//	rr.Use(permission.UserRequired)
-	//
-	//	rr.Route("/{id}", func(rrr chi.Router) {
-	//
-	//		rrr.Get("/storage", storage.FindOneByUserId(storageDB))
-	//
-	//	})
-	//
-	//})
-
-	//r.Route("/files", func(rr chi.Router) {
-	//
-	//	handler, err := tusd.NewUnroutedHandler(tusd.Config{
-	//		BasePath:                "/api/files",
-	//		StoreComposer:           s.files.TusdStoreComposer(),
-	//		PreUploadCreateCallback: files.PreUploadCreate(s.manager, s.uploadOpt),
-	//		NotifyCreatedUploads:    true,
-	//		NotifyCompleteUploads:   true,
-	//	})
-	//
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	go func() {
-	//		for {
-	//			select {
-	//			case hook := <-handler.CreatedUploads:
-	//				contextUploadId := hook.HTTPRequest.Header.Get("filex-context-upload-id")
-	//				cacheFile := core.FileCache{
-	//					ID:              hook.Upload.ID,
-	//					ContextUploadID: contextUploadId,
-	//				}
-	//				_ = s.files.CreateInCache(&cacheFile)
-	//			case hook := <-handler.CompleteUploads:
-	//				_ = s.files.CreateFromCache(hook.Upload.ID)
-	//			}
-	//		}
-	//	}()
-
-	//  rr.Post("/upload", auth.HandlerGetMe(s.manager, filesDB))
-	//
-	//	rr.Use(handler.Middleware)
-	//
-	//	rr.With(permission.SecureUpload).
-	//		Post("/", handler.PostFile)
-	//
-	//	rr.Route("/{id:[-+a-z0-9]+}", func(rrr chi.Router) {
-	//
-	//		rrr.With(permission.SecureUpload).
-	//			Patch("/", handler.PatchFile)
-	//
-	//		rrr.Get("/", handler.GetFile)
-	//		rrr.Head("/", handler.HeadFile)
-	//		rrr.Delete("/", handler.DelFile)
-	//
-	//	})
-	//
-	//})
+	r.Get("/serverOptions", s.serverOptions)
 
 	return r
+}
+
+func (s Server) serverOptions(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"signup": true,
+		"guest": map[string]interface{}{
+			"upload":  true,
+			"maxSize": 1073741824,
+		},
+	}
+
+	out, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Error(err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
 }

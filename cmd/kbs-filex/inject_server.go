@@ -4,12 +4,18 @@ import (
 	"github.com/kabaliserv/filex/cmd/kbs-filex/config"
 	"github.com/kabaliserv/filex/core"
 	"github.com/kabaliserv/filex/handler/api"
+	"github.com/kabaliserv/filex/handler/health"
 	"github.com/kabaliserv/filex/handler/web"
 	"github.com/kabaliserv/filex/server"
+	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/wire"
 	"github.com/unrolled/secure"
+)
+
+type (
+	healthzHandler http.Handler
 )
 
 var serverSet = wire.NewSet(
@@ -17,21 +23,29 @@ var serverSet = wire.NewSet(
 	web.New,
 	provideRouter,
 	provideServer,
+	provideHealthz,
 	provideServerOptions,
 	provideUploadOptions,
 )
 
-func provideRouter(api api.Server, web web.Server) *chi.Mux {
+func provideRouter(api api.Server, web web.Server, healthz healthzHandler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Mount("/api", api.Handler())
+	r.Mount("/healthz", healthz)
 	r.Mount("/", web.Handler())
 	return r
+}
+
+func provideHealthz() healthzHandler {
+	v := health.New()
+	return healthzHandler(v)
 }
 
 func provideUploadOptions(config config.Config) core.UploadOption {
 	return core.UploadOption{
 		GuestAllow:         config.Guest.AllowUpload,
 		GuestMaxUploadSize: config.Guest.MaxUploadSize,
+		GuestMaxDuration:   config.Guest.MaxFileDuration,
 	}
 }
 

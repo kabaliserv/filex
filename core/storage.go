@@ -1,19 +1,46 @@
 package core
 
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
 type (
 	Storage struct {
-		ID     string       `json:"id"`
-		UserID string       `json:"user_id"`
-		Size   int64        `json:"size"`
-		Quota  int64        `json:"quota"`
-		Save   func() error `json:"-"`
+		ID          uint   `json:"-" gorm:"primaryKey"`
+		UUID        string `json:"id" gorm:"uniqueIndex"`
+		UserID      uint   `json:"-"`
+		Size        int64  `json:"size"`
+		Quota       int64  `json:"quota"`
+		QuotaEnable bool   `json:"activeQuota"`
 	}
 
 	StorageStore interface {
-		Get(storageId string) (*Storage, error)
-		Add(storage *Storage) error
-		Del(storageId string) error
-		Has(storageId string) bool
-		GetByUserId(userId string) (*Storage, error)
+		Find(where Storage) (storages []Storage, err error)
+		FindByID(id uint) (storage Storage, err error)
+		FindByUUID(uuid string) (storage Storage, err error)
+		Save(storage *Storage) (err error)
+		Delete(storage *Storage) (err error)
 	}
 )
+
+func (s *Storage) BeforeCreate(tx *gorm.DB) (err error) {
+
+	has := func(id string) bool {
+		var count int64
+		tx.Where(Storage{UUID: id}).Count(&count)
+		return count > 0
+	}
+
+	var id string
+
+	for {
+		id = uuid.New().String()
+		if !has(id) {
+			break
+		}
+	}
+
+	s.UUID = id
+	return
+}
