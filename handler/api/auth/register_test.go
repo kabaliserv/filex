@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/kabaliserv/filex/core"
+	storageStore "github.com/kabaliserv/filex/store/storage"
 	userStore "github.com/kabaliserv/filex/store/users"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -32,6 +33,7 @@ func TestGoodRequest(t *testing.T) {
 	defer rawDB.Close()
 
 	users := userStore.NewUserStore(db, options)
+	_ = storageStore.NewStorageStore(db, options)
 
 	f := HandleRegister(users)
 

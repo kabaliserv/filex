@@ -8,6 +8,7 @@ import (
 
 	"github.com/kabaliserv/filex/core"
 	sessionStore "github.com/kabaliserv/filex/store/sessions"
+	storageStore "github.com/kabaliserv/filex/store/storage"
 	userStore "github.com/kabaliserv/filex/store/users"
 
 	"golang.org/x/crypto/bcrypt"
@@ -37,6 +38,7 @@ func TestLoginWithUsername(t *testing.T) {
 	defer rawDB.Close()
 
 	users := userStore.NewUserStore(db, options)
+	_ = storageStore.NewStorageStore(db, options)
 	sessions := sessionStore.NewSessionStore(db, options)
 
 	p, err := bcrypt.GenerateFromPassword([]byte("C0mpleX_P@ssw0rd"), PasswordCost)
@@ -94,6 +96,7 @@ func TestLoginWithEmail(t *testing.T) {
 	defer rawDB.Close()
 
 	users := userStore.NewUserStore(db, options)
+	_ = storageStore.NewStorageStore(db, options)
 	sessions := sessionStore.NewSessionStore(db, options)
 
 	p, err := bcrypt.GenerateFromPassword([]byte("C0mpleX_P@ssw0rd"), PasswordCost)
