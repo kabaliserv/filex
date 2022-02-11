@@ -56,7 +56,7 @@ func TestLoginWithUsername(t *testing.T) {
 	f := HandleLogin(users, sessions)
 
 	{ // test login with username
-		body := `{"username":"test","password":"C0mpleX_P@ssw0rd"}`
+		body := `{"login":"test","password":"C0mpleX_P@ssw0rd"}`
 
 		req := httptest.NewRequest("POST", "/fake", strings.NewReader(body))
 		w := httptest.NewRecorder()
