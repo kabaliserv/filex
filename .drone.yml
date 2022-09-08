@@ -1,0 +1,45 @@
+---
+kind: pipeline
+type: docker
+name: linux-amd64
+
+platform:
+  arch: amd64
+  os: linux
+
+steps:
+  - name: test
+    image: golang:1.17
+    commands:
+      - mkdir web/dist
+      - echo 0 > web/dist/test.txt
+      - go test ./...
+      - go build -o /dev/null github.com/kabaliserv/filex/cmd/kbs-filex
+
+  - name: build-front
+    image: node:lts-buster
+    commands:
+      - sh scripts/build-front.sh
+
+  - name: build-server
+    image: golang:1.17
+    commands:
+      - sh scripts/build-server.sh
+    environment:
+      GOARCH: amd64
+      GOOS: linux
+
+  - name: publish
+    image: plugins/docker:20.10
+    settings:
+      tags: ${DRONE_COMMIT_SHA:0:8}
+      dockerfile: docker/Dockerfile
+      repo: wilsonkbs/filex
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      event:
+        - push
+        - tag
